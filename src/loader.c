@@ -12,7 +12,7 @@ EXPORT	W		TADsize;
 EXPORT	FNAME		*OBJname = NULL;
 EXPORT	W		OBJentry;
 
-/* $B%U%!%$%k$N%m!<%I(B */
+/* ファイルのロード */
 EXPORT	ERR	load_file(TC *filename)
 {
 	W	err, i, fd;
@@ -20,21 +20,21 @@ EXPORT	ERR	load_file(TC *filename)
 	F_LINK	stat;
 	F_STATE	fs;
 
-	/* $B%"%s%m!<%I=hM}(B */
+	/* アンロード処理 */
 	if (filename == NULL) {
 		err = ER_OK;
 		fd = ER_NOEXS;
 		goto fin3;
 	}
 
-	/* $BF~NO%U%!%$%k$X$N%j%s%/<h$j=P$7(B */
+	/* 入力ファイルへのリンク取り出し */
 	err = get_lnk(filename, &l, F_NORM);
 	if (err < ER_OK) {
 		P(("load_file: get_lnk %d\n", err));
 		goto fin0;
 	}
 
-	/* $BF~NO%U%!%$%k$N%*!<%W%s(B - $B8=:_%l%3!<%I$O%U%!%$%k$N@hF,(B */
+	/* 入力ファイルのオープン - 現在レコードはファイルの先頭 */
 	err = opn_fil(&l, F_READ | F_EXCL, NULL);
 	if (err < ER_OK) {
 		P(("load_file: opn_fil %d\n", err));
@@ -42,14 +42,14 @@ EXPORT	ERR	load_file(TC *filename)
 	}
 	fd = err;
 
-	/* $B%j%s%/?t$N3MF@(B */
+	/* リンク数の獲得 */
 	err = ofl_sts(fd, NULL, &fs, NULL);
 	if (err < ER_OK) {
 		P(("load_file: ofl_sts %d\n", err));
 		goto fin1;
 	}
 
-	/* $B2>?HL>MQNN0h$N3NJ](B */
+	/* 仮身名用領域の確保 */
 	OBJentry = fs.f_nlink;
 	if (OBJentry) {
 		OBJname = calloc(OBJentry, sizeof(FNAME));
@@ -62,7 +62,7 @@ EXPORT	ERR	load_file(TC *filename)
 		OBJname = NULL;
 	}
 
-	/* $BA4%j%s%/$NFI$_=P$7(B */
+	/* 全リンクの読み出し */
 	for (i = 0; i < OBJentry; i++) {
 		err = fnd_lnk(fd, F_FWD, NULL, 0, NULL);
 		if (err < ER_OK) {
@@ -77,7 +77,7 @@ EXPORT	ERR	load_file(TC *filename)
 			goto fin2;
 		}
 
-		/* $B%j%s%/%U%!%$%k(B/$B%j%s%/%l%3!<%I$K1~$8$F=hM}(B */
+		/* リンクファイル/リンクレコードに応じて処理 */
 		err = lnk_sts((LINK *)&v, &stat);
 		if (err >= ER_OK) {
 			memcpy(OBJname[i].tc, stat.f_name, sizeof(stat.f_name));
@@ -97,21 +97,21 @@ EXPORT	ERR	load_file(TC *filename)
 		}
 	}
 
-	/* $B<g(BTAD$B%l%3!<%I$X0\F0(B */
+	/* 主TADレコードへ移動 */
 	err = fnd_rec(fd, F_ENDTOP, (1 << 1), 0, NULL);
 	if (err < ER_OK) {
 		P(("load_file: fnd_rec %d\n", err));
 		goto fin2;
 	}
 
-	/* $B%l%3!<%I%5%$%:$N<hF@(B */
+	/* レコードサイズの取得 */
 	err = rea_rec(fd, 0, NULL, 0, &TADsize, NULL);
 	if (err < ER_OK) {
 		P(("load_file: rea_rec %d\n", err));
 		goto fin2;
 	}
 
-	/* $B%a%b%j$N3NJ](B */
+	/* メモリの確保 */
 	TADdata = malloc(TADsize);
 	if (TADdata == NULL) {
 		P(("load_file: malloc NULL\n"));
@@ -119,7 +119,7 @@ EXPORT	ERR	load_file(TC *filename)
 		goto fin2;
 	}
 
-	/* $B%l%3!<%IA4BN$NFI$_9~$_(B */
+	/* レコード全体の読み込み */
 	err = rea_rec(fd, 0, (B *)TADdata, TADsize, NULL, NULL);
 	if (err < ER_OK) {
 		P(("load_file: rea_rec %d\n", err));
@@ -128,7 +128,7 @@ EXPORT	ERR	load_file(TC *filename)
 
 	DP(("load_file: TADsize %d, OBJentry %d\n", TADsize, OBJentry));
 
-	/* $B%U%!%$%k$r%/%m!<%:$7$F=*N;(B */
+	/* ファイルをクローズして終了 */
 	goto fin1;	
 
 fin3:

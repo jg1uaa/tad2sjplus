@@ -14,7 +14,7 @@
 LOCAL	W	VOBJpos;
 LOCAL	W	HankakuState;
 
-/* $BJ8;zNs$N=PNO(B */
+/* 文字列の出力 */
 LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
 {
 	W	err, n, pos;
@@ -26,7 +26,7 @@ LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
 		goto fin0;
 	}
 
-	/* $BF~NO%5%$%:$rD6$($k$3$H$O7h$7$F$J$$(B */
+	/* 入力サイズを超えることは決してない */
 	buf = malloc(len);
 	if (buf == NULL) {
 		P(("output_string: malloc NULL\n"));
@@ -49,7 +49,7 @@ LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
 			break;
 
 		default:
-			/* $BH>3Q2=2DG=$JJ*$OH>3Q$G=PNO(B */
+			/* 半角化可能な物は半角で出力 */
 			if (hankaku) {
 				n = zen2han(*tc, &buf[pos]);
 				if (n > 0) {
@@ -79,7 +79,7 @@ fin0:
 	return err;
 }
 
-/* $B<B?HL>$N=PNO(B */
+/* 実身名の出力 */
 LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 {
 #define	TMPSZ	512
@@ -93,7 +93,7 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 	else if (attr & OPTION_ZENKAKU) hankaku = FALSE;
 	else hankaku = HankakuState;
 
-	/* $B<B?HL>$r(BSJIS$B$KJQ49(B */
+	/* 実身名をSJISに変換 */
 	pos = 0;
 	len = tc_strlen(tc);
 	for (i = 0; i < len; i++) {
@@ -112,8 +112,8 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 	}
 	name[pos] = '\0';
 
-	/* $B@07A(B */
-	// snprintf()$B$,L5$$$N$G=PNO7k2L$N%5%$%:$KCm0U(B
+	/* 整形 */
+	// snprintf()が無いので出力結果のサイズに注意
 	if (attr & OPTION_TAG_HTML) {
 		sprintf(tmp, "<a href=\"%s\">%s</a>", name, name);
 	} else if (attr & OPTION_TAG_WIKI) {
@@ -122,7 +122,7 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 		sprintf(tmp, "%s", name);
 	}
 
-	/* $B=PNO(B */
+	/* 出力 */
 	err = wri_rec(fd, -1, tmp, strlen(tmp), NULL, NULL, 0);
 	if (err < ER_OK) {
 		P(("output_objname: wri_rec %d\n", err));
@@ -131,7 +131,7 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 	return err;
 }
 
-/* $B%;%0%a%s%H$N2r<a(B */
+/* セグメントの解釈 */
 LOCAL	W	parse_segment(W fd, W id, W len, VP dt, UW attr)
 {
 	W	err;
@@ -139,21 +139,21 @@ LOCAL	W	parse_segment(W fd, W id, W len, VP dt, UW attr)
 
 	switch (id) {
 	default:
-		/* $B2?$b$7$J$$(B */
+		/* 何もしない */
 		err = ER_OK;
 		break;
 
 	case	TS_TFONT:
-		/* $BJ8;z;XDjIUd5(B */
+		/* 文字指定付箋 */
 		d = dt;
-		if (d[0] == 0x0300 && len >= 6) { // $BJ8;z3HBg(B/$B=L>.;XDjIUd5(B
+		if (d[0] == 0x0300 && len >= 6) { // 文字拡大/縮小指定付箋
 			HankakuState = (d[2] == 0x0102);
 		}
 		err = ER_OK;
 		break;
 
 	case	TS_VOBJ:
-		/* $B2>?H(B */
+		/* 仮身 */
 		if (attr & OPTION_VOBJNAME) {
 			if (VOBJpos < OBJentry) {
 				err = output_objname(fd, OBJname[VOBJpos++].tc,
@@ -166,7 +166,7 @@ LOCAL	W	parse_segment(W fd, W id, W len, VP dt, UW attr)
 				err = ER_OK;
 			}
 		} else {
-			/* $B<B?HL>$rE83+$7$J$$(B */
+			/* 実身名を展開しない */
 			err = ER_OK;
 		}
 
@@ -176,7 +176,7 @@ LOCAL	W	parse_segment(W fd, W id, W len, VP dt, UW attr)
 	return err;
 }
 
-/* $BHs%;%0%a%s%HItJ,$ND9$5$r5a$a$k(B */
+/* 非セグメント部分の長さを求める */
 LOCAL	W	nonseg_length(UH *buf, W size)
 {
 	W	i;
@@ -185,10 +185,10 @@ LOCAL	W	nonseg_length(UH *buf, W size)
 		if (*buf++ >= 0xff00) break;
 	}
 
-	return i * sizeof(UH);	// TAD$B%G!<%?$KJo$$!"La$jCM$O(Bbyte$BC10L$H$9$k(B
+	return i * sizeof(UH);	// TADデータに倣い、戻り値はbyte単位とする
 }
 
-/* TAD$B%G!<%?$r%;%0%a%s%HC10L$G%Q!<%9(B */
+/* TADデータをセグメント単位でパース */
 EXPORT	W	parse(W fd, UH *buf, W size, UW attr)
 {
 	W	err, i, pos, len;
@@ -203,7 +203,7 @@ EXPORT	W	parse(W fd, UH *buf, W size, UW attr)
 	while (i < size) {
 		id = buf[pos = i];
 
-		/* TAD$BJ8;zNs(B */
+		/* TAD文字列 */
 		if (id < 0xff00) {
 			len = nonseg_length(&buf[pos], size - pos);
 			err = output_string(fd, len, &buf[pos], HankakuState);
@@ -215,18 +215,18 @@ EXPORT	W	parse(W fd, UH *buf, W size, UW attr)
 			continue;
 		}
 
-		/* TAD$B%;%0%a%s%H(B */
+		/* TADセグメント */
 		//       (normal)	(large)
 		// pos+0 ID		ID
 		// pos+1 length		0xffff
 		// pos+2		length(low)
 		// pos+3		length(high)
 
-		/* ID$B$H(Blength$B$,FI$_=P$;$k$3$H(B */
+		/* IDとlengthが読み出せること */
 		if (pos + 2 > size) break;
 		len = buf[pos + 1];
 
-		/* $B%i!<%8%;%0%a%s%H$N>l9g(B */
+		/* ラージセグメントの場合 */
 		if (len == 0xffff) {
 			pos += 2;
 			i += 2;
@@ -234,7 +234,7 @@ EXPORT	W	parse(W fd, UH *buf, W size, UW attr)
 			len = (buf[pos + 1] << 16) | buf[pos + 0];
 		}
 
-		/* $B%;%0%a%s%HK\BN$rA4$FFI$_=P$;$k$3$H(B */
+		/* セグメント本体を全て読み出せること */
 		if (pos + 2 + len / 2 > size) break;
 		err = parse_segment(fd, id & 0xff, len, &buf[pos + 2], attr);
 		if (err < ER_OK) {

@@ -49,7 +49,7 @@ EXPORT	W	main(W ac, TC *av[])
 	B	dummy;
 	TC	path[L_PATHNM];
 
-	/* $B%X%k%W$NI=<((B */
+	/* ヘルプの表示 */
 	if (ac < 4) {
 		P(("usage: %S [option] [TADfile] [SJISfile]\n", av[0]));
 		P(("	option:	t	text only\n"));
@@ -60,7 +60,7 @@ EXPORT	W	main(W ac, TC *av[])
 		goto fin0;
 	}
 
-	/* $B%*%W%7%g%s$N@_Dj(B */
+	/* オプションの設定 */
 	attr = 0;
 	switch (*av[1]) {
 	case	TK_h:	attr |= OPTION_VOBJNAME | OPTION_HANKAKU; break;
@@ -77,18 +77,18 @@ EXPORT	W	main(W ac, TC *av[])
 
 	convert_path(path, av[2], L_PATHNM);
 
-	/* TAD$B%G!<%?$NFI$_=P$7(B */
+	/* TADデータの読み出し */
 	err = load_file(path);
 	if (err < ER_OK) goto fin0;
 
-	/* $B%j%s%/$r3MF@(B	*/
+	/* リンクを獲得	*/
 	err = get_lnk(NULL, &l, F_NORM);
 	if (err < ER_OK) {
 		P(("main: get_lnk %d\n", err));
 		goto fin1;
 	}
 
-	/* $B=PNO%U%!%$%k$N:n@.(B */
+	/* 出力ファイルの作成 */
 	err = cre_fil(&l, av[3], NULL, 1, F_FIX);
 	if (err < ER_OK) {
 		P(("main: cre_fil %d\n", err));
@@ -96,21 +96,21 @@ EXPORT	W	main(W ac, TC *av[])
 	}
 	fd = err;
 
-	/* $B6u$N%l%3!<%I$r=PNO(B */
+	/* 空のレコードを出力 */
 	err = apd_rec(fd, &dummy, 0, 31, 0, 0);
 	if (err < ER_OK) {
 		P(("main: apd_rec %d\n", err));
 		goto fin2;
 	}
 
-	/* $B=*C<%l%3!<%I$N0l$DA0$K0\F0$9$k(B */
+	/* 終端レコードの一つ前に移動する */
 	err = see_rec(fd, -1, -1, NULL);
 	if (err < ER_OK) {
 		P(("main: see_rec %d\n", err));
 		goto fin2;
 	}
 
-	/* $B2r@O!&7k2L=PNO(B */
+	/* 解析・結果出力 */
 	err = parse(fd, TADdata, TADsize, attr);
 	if (err < ER_OK) {
 		P(("main: parse %d\n", err));

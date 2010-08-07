@@ -26,18 +26,18 @@ typedef struct _fname {
 	TC	tc[L_FNM + 1];
 } FNAME;
 
-#define	OPTION_VOBJNAME	(1 << 0)	// $B<B?HL>E83+(B
-#define	OPTION_HANKAKU	(1 << 1)	// $B<B?HL>$rA43Q$K8GDj(B
-#define	OPTION_ZENKAKU	(1 << 2)	// $B<B?HL>$rH>3Q$K8GDj(B
+#define	OPTION_VOBJNAME	(1 << 0)	// 実身名展開
+#define	OPTION_HANKAKU	(1 << 1)	// 実身名を全角に固定
+#define	OPTION_ZENKAKU	(1 << 2)	// 実身名を半角に固定
 
-#define	OPTION_TAG_HTML	(1 << 24)	// $BFC<l!'(BHTML$B%?%0$rIU2C(B
-#define	OPTION_TAG_WIKI	(1 << 25)	// $BFC<l!'(BWiki$B%?%0$rIU2C(B
+#define	OPTION_TAG_HTML	(1 << 24)	// 特殊：HTMLタグを付加
+#define	OPTION_TAG_WIKI	(1 << 25)	// 特殊：Wikiタグを付加
 
 /* loader.c */
-IMPORT	TC		*TADdata;	// TAD$B%G!<%?3JG<NN0h(B
-IMPORT	W		TADsize;	// TAD$B%G!<%?%5%$%:(B
-IMPORT	FNAME		*OBJname;	// $B<B?HL>3JG<NN0h(B
-IMPORT	W		OBJentry;	// $B2>?H?t(B
+IMPORT	TC		*TADdata;	// TADデータ格納領域
+IMPORT	W		TADsize;	// TADデータサイズ
+IMPORT	FNAME		*OBJname;	// 実身名格納領域
+IMPORT	W		OBJentry;	// 仮身数
 
 IMPORT	ERR	load_file(TC *filename);
 
