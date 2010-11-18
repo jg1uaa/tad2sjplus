@@ -114,6 +114,10 @@ EXPORT	UH	_mbcjistojms(UH jis)
 	high = (jis >> 8) & 0xff;
 	low  =  jis       & 0xff;
 
+	/* reject invalid code */
+	if (high < 0x21 || high > 0x7e ||
+	    low  < 0x21 || low  > 0x7e) return 0x81ac;	// 〓
+
 	/* 2nd byte */
 	low += (high & 1) ? 0x1f : 0x7d;
 	if (low > 0x7e) low++;

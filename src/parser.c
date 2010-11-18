@@ -10,9 +10,11 @@
 #define	TAB	0x0009
 #define	LF	0x000a
 #define	CR	0x000d
+#define	LANGJP	0xfe21
 
 LOCAL	W	VOBJpos;
 LOCAL	W	HankakuState;
+LOCAL	W	LangState = LANGJP;
 
 /* 文字列の出力 */
 LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
@@ -49,6 +51,20 @@ LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
 			break;
 
 		default:
+			/* 言語ID */
+			if ((*tc & 0xff00) == 0xfe00) {
+				LangState = *tc;
+				break;
+			}
+
+			/* 日本語以外の言語が指定されている場合 */
+			if (LangState != LANGJP) {
+				sjis = _mbcjistojms(0);
+				buf[pos++] = sjis >> 8;
+				buf[pos++] = sjis;
+				break;
+			}
+
 			/* 半角化可能な物は半角で出力 */
 			if (hankaku) {
 				n = zen2han(*tc, &buf[pos]);
@@ -58,6 +74,7 @@ LOCAL	W	output_string(W fd, W len, TC *tc, W hankaku)
 				}
 			}
 
+			/* 全角 */
 			sjis = _mbcjistojms(*tc);
 			buf[pos++] = sjis >> 8;
 			buf[pos++] = sjis;
@@ -84,7 +101,7 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 {
 #define	TMPSZ	512
 
-	W	i, err, hankaku, pos, len, n;
+	W	i, err, hankaku, pos, len, n, lang;
 	UH	sjis;
 	UB	name[(L_FNM + 1) * sizeof(TC)];
 	UB	tmp[TMPSZ];
@@ -95,8 +112,25 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 
 	/* 実身名をSJISに変換 */
 	pos = 0;
+	lang = LANGJP;
 	len = tc_strlen(tc);
 	for (i = 0; i < len; i++) {
+		/* 言語ID */
+		if ((*tc & 0xff00) == 0xfe00) {
+			lang = *tc++;
+			continue;
+		}
+
+		/* 日本語以外の言語が指定されている場合 */
+		if (lang != LANGJP) {
+			sjis = _mbcjistojms(0);
+			name[pos++] = sjis >> 8;
+			name[pos++] = sjis;
+			tc++;
+			continue;
+		}
+
+		/* 半角化可能な物は半角で出力 */
 		if (hankaku) {
 			n = zen2han(*tc, &name[pos]);
 			if (n > 0) {
@@ -106,6 +140,7 @@ LOCAL	W	output_objname(W fd, TC *tc, UW attr)
 			}
 		}
 
+		/* 全角 */
 		sjis = _mbcjistojms(*tc++);
 		name[pos++] = sjis >> 8;
 		name[pos++] = sjis;
